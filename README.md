@@ -57,12 +57,18 @@ python -m autoc examples/hello.autoc --emit-python
 
 ## GitHub next steps
 
-1. Create a new GitHub repository.
-2. Commit the project.
-3. Add a short project description and README.
-4. Add a `LICENSE` file.
-5. Create a `releases` milestone for v0.1.
-6. Add issues for parser improvements, type inference, and LLVM backend work.
+1. Publish the current milestone and project metadata.
+2. Maintain a roadmap for language stability and compiler features.
+3. Add benchmark coverage to validate the prototype direction.
+4. Continue work on ownership, type inference, and LLVM lowering.
+
+## Benchmarks
+
+A basic benchmark script is included in `benchmarks/benchmark_autoc.py` to measure the runtime of the current prototype on a representative loop-heavy workload.
+
+## Roadmap
+
+The project direction and milestones are tracked in `ROADMAP.md`.
 
 ## Status
 
