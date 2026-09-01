@@ -30,17 +30,20 @@ class VarDecl(Node):
         self.value = value
         self.type_name = type_name
         self.auto = auto
+        self.inferred_type = None
 
 
 class Assignment(Node):
     def __init__(self, target, value):
         self.target = target
         self.value = value
+        self.inferred_type = None
 
 
 class ReturnStmt(Node):
     def __init__(self, value=None):
         self.value = value
+        self.inferred_type = None
 
 
 class IfStmt(Node):
