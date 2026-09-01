@@ -1,0 +1,308 @@
+from typing import List
+
+from .ast import (
+    Assignment, BinaryOp, Call, DictLiteral, ExprStmt, ForLoop,
+    FunctionDef, IfStmt, ListLiteral, Name, Number, Param,
+    Program, ReturnStmt, StringLiteral, UnaryOp, VarDecl, WhileLoop,
+)
+from .lexer import Token
+
+
+class ParserError(ValueError):
+    pass
+
+
+class Parser:
+    def __init__(self, tokens: List[Token]):
+        self.tokens = tokens
+        self.index = 0
+
+    def peek(self, offset: int = 0):
+        pos = self.index + offset
+        if pos >= len(self.tokens):
+            return None
+        return self.tokens[pos]
+
+    def current(self):
+        return self.peek(0)
+
+    def advance(self):
+        tok = self.current()
+        if tok is not None:
+            self.index += 1
+        return tok
+
+    def match(self, *names):
+        tok = self.current()
+        if tok is None:
+            return False
+        if tok.type in names or tok.value in names:
+            self.index += 1
+            return True
+        return False
+
+    def expect(self, *names):
+        tok = self.current()
+        if tok is None:
+            raise ParserError(f"Expected one of {names}, got EOF")
+        if tok.type in names or tok.value in names:
+            self.index += 1
+            return tok
+        raise ParserError(f"Expected one of {names}, got {tok.type}={tok.value!r} at {tok.pos}")
+
+    def parse(self) -> Program:
+        items = []
+        while self.current() is not None:
+            items.append(self.parse_statement())
+        return Program(items)
+
+    def parse_statement(self):
+        tok = self.current()
+        if tok is None:
+            raise ParserError("Unexpected EOF")
+
+        if tok.type == "KEYWORD" and tok.value == "fn":
+            return self.parse_function()
+        if tok.type == "KEYWORD" and tok.value == "return":
+            return self.parse_return()
+        if tok.type == "KEYWORD" and tok.value == "if":
+            return self.parse_if()
+        if tok.type == "KEYWORD" and tok.value == "for":
+            return self.parse_for()
+        if tok.type == "KEYWORD" and tok.value == "while":
+            return self.parse_while()
+        if tok.type == "KEYWORD" and tok.value in {"auto", "let"}:
+            return self.parse_var_decl()
+        if tok.type == "KEYWORD" and tok.value in {"print", "range"}:
+            return ExprStmt(self.parse_expression())
+
+        if tok.type == "IDENT":
+            if self.peek(1) is not None and self.peek(1).type == "ASSIGN":
+                return self.parse_assignment()
+            expr = self.parse_expression()
+            return ExprStmt(expr)
+
+        raise ParserError(f"Unexpected token: {tok}")
+
+    def parse_function(self):
+        self.expect("KEYWORD", "fn")
+        name_tok = self.expect("IDENT")
+        self.expect("LPAREN")
+        params = []
+        if self.current() is not None and self.current().type != "RPAREN":
+            while True:
+                param_name = self.expect("IDENT")
+                type_name = None
+                if self.match("COLON"):
+                    type_name = self.parse_type_name()
+                params.append(Param(param_name.value, type_name))
+                if not self.match("COMMA"):
+                    break
+        self.expect("RPAREN")
+        return_type = None
+        if self.match("MINUS"):
+            self.expect("GT")
+            return_type = self.parse_type_name()
+        body = self.parse_block()
+        return FunctionDef(name_tok.value, params, return_type, body)
+
+    def parse_block(self):
+        self.expect("LBRACE")
+        statements = []
+        while self.current() is not None and self.current().type != "RBRACE":
+            statements.append(self.parse_statement())
+        self.expect("RBRACE")
+        return statements
+
+    def parse_var_decl(self):
+        self.expect("KEYWORD", "auto", "let")
+        name_tok = self.expect("IDENT")
+        type_name = None
+        if self.match("COLON"):
+            type_name = self.parse_type_name()
+        self.expect("ASSIGN")
+        value = self.parse_expression()
+        return VarDecl(name_tok.value, value, type_name, auto=True)
+
+    def parse_assignment(self):
+        name_tok = self.expect("IDENT")
+        self.expect("ASSIGN")
+        value = self.parse_expression()
+        return Assignment(name_tok.value, value)
+
+    def parse_return(self):
+        self.expect("KEYWORD", "return")
+        if self.current() is None or self.current().type == "RBRACE":
+            return ReturnStmt(None)
+        return ReturnStmt(self.parse_expression())
+
+    def parse_if(self):
+        self.expect("KEYWORD", "if")
+        condition = self.parse_expression()
+        then_block = self.parse_block()
+        else_block = None
+        if self.current() is not None and self.current().type == "KEYWORD" and self.current().value == "else":
+            self.expect("KEYWORD", "else")
+            else_block = self.parse_block()
+        return IfStmt(condition, then_block, else_block)
+
+    def parse_for(self):
+        self.expect("KEYWORD", "for")
+        auto_infer = self.match("KEYWORD", "auto")
+        var_name = self.expect("IDENT").value
+        self.expect("KEYWORD", "in")
+        iterable = self.parse_expression()
+        body = self.parse_block()
+        return ForLoop(var_name, iterable, body)
+
+    def parse_while(self):
+        self.expect("KEYWORD", "while")
+        condition = self.parse_expression()
+        body = self.parse_block()
+        return WhileLoop(condition, body)
+
+    def parse_expression(self):
+        return self.parse_or()
+
+    def parse_or(self):
+        left = self.parse_and()
+        while self.match("OROR"):
+            op = self.advance().value
+            right = self.parse_and()
+            left = BinaryOp(op, left, right)
+        return left
+
+    def parse_and(self):
+        left = self.parse_equality()
+        while self.match("ANDAND"):
+            op = self.advance().value
+            right = self.parse_equality()
+            left = BinaryOp(op, left, right)
+        return left
+
+    def parse_equality(self):
+        left = self.parse_relational()
+        while self.current() is not None and self.current().type in {"EQ", "NEQ"}:
+            op = self.advance().value
+            right = self.parse_relational()
+            left = BinaryOp(op, left, right)
+        return left
+
+    def parse_relational(self):
+        left = self.parse_additive()
+        while self.current() is not None and self.current().type in {"LT", "GT", "LTE", "GTE"}:
+            op = self.advance().value
+            right = self.parse_additive()
+            left = BinaryOp(op, left, right)
+        return left
+
+    def parse_additive(self):
+        left = self.parse_multiplicative()
+        while self.current() is not None and self.current().type in {"PLUS", "MINUS"}:
+            op = self.advance().value
+            right = self.parse_multiplicative()
+            left = BinaryOp(op, left, right)
+        return left
+
+    def parse_multiplicative(self):
+        left = self.parse_unary()
+        while self.current() is not None and self.current().type in {"STAR", "SLASH", "PERCENT"}:
+            op = self.advance().value
+            right = self.parse_unary()
+            left = BinaryOp(op, left, right)
+        return left
+
+    def parse_unary(self):
+        if self.current() is not None and self.current().type in {"PLUS", "MINUS", "BANG"}:
+            op = self.advance().value
+            return UnaryOp(op, self.parse_unary())
+        return self.parse_primary()
+
+    def parse_primary(self):
+        tok = self.current()
+        if tok is None:
+            raise ParserError("Unexpected EOF in expression")
+
+        if tok.type == "INT":
+            self.advance()
+            return Number(int(tok.value))
+        if tok.type == "FLOAT":
+            self.advance()
+            return Number(float(tok.value))
+        if tok.type == "STRING":
+            self.advance()
+            return StringLiteral(tok.value)
+        if tok.type == "KEYWORD" and tok.value == "true":
+            self.advance()
+            return Number(True)
+        if tok.type == "KEYWORD" and tok.value == "false":
+            self.advance()
+            return Number(False)
+        if tok.type == "KEYWORD" and tok.value in {"print", "range"}:
+            name = self.advance().value
+            self.expect("LPAREN")
+            args = []
+            if self.current() is not None and self.current().type != "RPAREN":
+                while True:
+                    args.append(self.parse_expression())
+                    if not self.match("COMMA"):
+                        break
+            self.expect("RPAREN")
+            return Call(name, args)
+
+        if tok.type == "IDENT":
+            name = self.advance().value
+            if self.match("LPAREN"):
+                args = []
+                if self.current() is not None and self.current().type != "RPAREN":
+                    while True:
+                        args.append(self.parse_expression())
+                        if not self.match("COMMA"):
+                            break
+                self.expect("RPAREN")
+                return Call(name, args)
+            return Name(name)
+
+        if self.match("LPAREN"):
+            expr = self.parse_expression()
+            self.expect("RPAREN")
+            return expr
+
+        if self.match("LBRACKET"):
+            items = []
+            if self.current() is not None and self.current().type != "RBRACKET":
+                while True:
+                    items.append(self.parse_expression())
+                    if not self.match("COMMA"):
+                        break
+            self.expect("RBRACKET")
+            return ListLiteral(items)
+
+        if self.match("LBRACE"):
+            items = []
+            if self.current() is not None and self.current().type != "RBRACE":
+                while True:
+                    key = self.parse_expression()
+                    self.expect("COLON")
+                    value = self.parse_expression()
+                    items.append((key, value))
+                    if not self.match("COMMA"):
+                        break
+            self.expect("RBRACE")
+            return DictLiteral(items)
+
+        raise ParserError(f"Unexpected token in expression: {tok}")
+
+    def parse_type_name(self):
+        tok = self.current()
+        if tok is None:
+            raise ParserError("Missing type name")
+        if tok.type == "IDENT" or (tok.type == "KEYWORD" and tok.value in {"int", "float", "bool", "str", "list", "map"}):
+            self.advance()
+            return tok.value
+        raise ParserError(f"Invalid type name: {tok}")
+
+
+def parse_tokens(tokens: List[Token]):
+    parser = Parser(tokens)
+    return parser.parse()

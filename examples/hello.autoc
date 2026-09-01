@@ -1,0 +1,13 @@
+fn add(a: int, b: int) -> int {
+    auto total = a + b
+    return total
+}
+
+fn main() {
+    auto xs = [1, 2, 3, 4]
+    auto total = 0
+    for auto x in xs {
+        total = total + x
+    }
+    print(add(total, 5))
+}
