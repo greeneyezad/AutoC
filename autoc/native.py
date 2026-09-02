@@ -8,7 +8,18 @@ class NativeBuildError(RuntimeError):
     pass
 
 
+TARGET_ALIASES = {
+    "linux-aarch64": "linux-arm64",
+    "android-arm64-v8a": "android-arm64",
+}
+
+
+def normalize_target(target):
+    return TARGET_ALIASES.get(target, target)
+
+
 def find_compiler(target, compiler=None):
+    target = normalize_target(target)
     if compiler:
         return compiler
     if target == "linux-arm64":
@@ -28,6 +39,7 @@ def find_compiler(target, compiler=None):
 
 
 def build_native(source, output, target="linux-arm64", compiler=None):
+    target = normalize_target(target)
     from .interpreter import compile_autoc_to_llvm
 
     compiler_path = find_compiler(target, compiler)

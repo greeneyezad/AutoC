@@ -1,0 +1,8 @@
+fn main() {
+    auto values = [1, 2, 3, 4]
+    auto total = 0
+    for auto value in values {
+        total += value
+    }
+    print(total)
+}

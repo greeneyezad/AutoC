@@ -6,6 +6,7 @@ from .llvm_codegen import LLVMCodeGenerator
 from .parser import parse_tokens
 from .preprocessor import preprocess
 from .native import NativeBuildError, build_native
+from .native import TARGET_ALIASES
 from .type_inference import infer_types
 
 
@@ -58,7 +59,8 @@ def main():
     parser.add_argument("--emit-python", action="store_true", help="Print generated Python instead of executing")
     parser.add_argument("--emit-llvm", action="store_true", help="Print generated LLVM IR instead of executing")
     parser.add_argument("--emit-native", action="store_true", help="Build a native shared library")
-    parser.add_argument("--target", choices=["linux-arm64", "android-arm64"], default="linux-arm64", help="Native target")
+    targets = ["linux-arm64", "linux-aarch64", "android-arm64", "android-arm64-v8a"]
+    parser.add_argument("--target", choices=targets, default="linux-arm64", help="Native target")
     parser.add_argument("--native-compiler", help="Override the native compiler executable")
     parser.add_argument("-o", "--output", help="Write generated Python to this path")
     parser.add_argument("--run", action="store_true", help="Run the source after compiling it")
