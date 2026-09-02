@@ -145,6 +145,28 @@ def test_c_standard_library_equivalents():
     namespace["main"]()
 
 
+def test_llvm_lowers_calls_and_control_flow():
+    src = '''
+    fn add(a: int, b: int) -> int {
+        return a + b
+    }
+    fn main() -> void {
+        auto value = add(1, 2)
+        if value > 0 {
+            value = value - 1
+        }
+        while value > 0 {
+            value -= 1
+        }
+    }
+    '''
+    llvm = compile_autoc_to_llvm(src)
+    assert llvm.count("define ") == 2
+    assert "call i32 @add" in llvm
+    assert "br i1" in llvm
+    assert "while_body" in llvm
+
+
 def test_llvm_emits_ir_for_function():
     src = '''
     fn add(a: int, b: int) -> int {

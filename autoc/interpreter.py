@@ -23,10 +23,10 @@ def compile_autoc_to_python(source, include_paths=None):
 def compile_autoc_to_llvm(source):
     program = infer_types(source)
     generator = LLVMCodeGenerator()
-    for item in program.items:
-        if hasattr(item, "body"):
-            return generator.emit_function(item.name, item.params, item.return_type or "int", item.body)
-    raise AutoCCompileError("No function found in AutoC source")
+    llvm = generator.emit_program(program)
+    if not llvm:
+        raise AutoCCompileError("No function found in AutoC source")
+    return llvm
 
 
 def run_autoc_string(source):
