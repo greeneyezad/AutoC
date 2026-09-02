@@ -124,3 +124,28 @@ def test_c_declarations_compound_assignments_and_operators():
     assert "value = 1" in output
     assert "value = (value + 3)" in output
     assert "value = ((value << 1) | 1)" in output
+
+
+def test_struct_union_enum_and_field_access():
+    src = '''
+    struct Point {
+        int x;
+        int y;
+    }
+    union Number {
+        int integer;
+        double decimal;
+    }
+    enum Color { RED, GREEN = 4, BLUE }
+
+    fn main() {
+        auto point = Point(2, 3)
+        print(point.x + point.y)
+        print(Color.BLUE)
+    }
+    '''
+    output = compile_autoc_to_python(src)
+    namespace = {}
+    exec(output, namespace, namespace)
+    assert namespace["Point"](2, 3).x == 2
+    assert namespace["Color"].BLUE == 5

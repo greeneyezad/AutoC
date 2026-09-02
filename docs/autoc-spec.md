@@ -52,6 +52,20 @@ Built-in types include:
 - `list[T]`
 - `map[K, V]`
 
+Structs, unions, and enums are supported by the prototype Python backend:
+
+```autoc
+struct Point {
+    int x;
+    int y;
+}
+
+enum Color { RED, GREEN = 4, BLUE }
+```
+
+Struct and union values use Python objects during interpretation. Union storage
+and C ABI layout are reserved for the native backend.
+
 The language supports inferred local type declarations using `auto`:
 
 ```autoc

@@ -2,8 +2,9 @@ from typing import List
 
 from .ast import (
     Assignment, BinaryOp, Call, DictLiteral, ExprStmt, ForLoop,
-    FunctionDef, IfStmt, ListLiteral, Name, Number, Param,
+    EnumDef, FieldAccess, FunctionDef, IfStmt, ListLiteral, Name, Number, Param,
     Program, ReturnStmt, StringLiteral, UnaryOp, VarDecl, WhileLoop,
+    StructDef, UnionDef,
 )
 from .lexer import Token
 
@@ -61,8 +62,13 @@ class Parser:
         if tok is None:
             raise ParserError("Unexpected EOF")
 
+        if tok.type == "SEMI":
+            self.advance()
+            return self.parse_statement()
         if tok.type == "KEYWORD" and tok.value == "fn":
             return self.parse_function()
+        if tok.type == "KEYWORD" and tok.value in {"struct", "union", "enum"}:
+            return self.parse_type_definition()
         if tok.type == "KEYWORD" and tok.value == "return":
             return self.parse_return()
         if tok.type == "KEYWORD" and tok.value == "if":
@@ -119,6 +125,34 @@ class Parser:
             statements.append(self.parse_statement())
         self.expect("RBRACE")
         return statements
+
+    def parse_type_definition(self):
+        kind = self.advance().value
+        name = self.expect("IDENT").value
+        self.expect("LBRACE")
+        if kind == "enum":
+            members = []
+            next_value = 0
+            while self.current() is not None and self.current().type != "RBRACE":
+                member = self.expect("IDENT").value
+                value = next_value
+                if self.match("ASSIGN"):
+                    value = self.expect("INT").value
+                    value = int(value)
+                members.append((member, value))
+                next_value = value + 1
+                self.match("COMMA")
+            self.expect("RBRACE")
+            return EnumDef(name, members)
+
+        fields = []
+        while self.current() is not None and self.current().type != "RBRACE":
+            field_type = self.parse_type_name()
+            field_name = self.expect("IDENT").value
+            fields.append((field_name, field_type))
+            self.expect("SEMI")
+        self.expect("RBRACE")
+        return StructDef(name, fields) if kind == "struct" else UnionDef(name, fields)
 
     def parse_var_decl(self):
         self.expect("KEYWORD", "auto", "let")
@@ -311,7 +345,10 @@ class Parser:
                             break
                 self.expect("RPAREN")
                 return Call(name, args)
-            return Name(name)
+            expression = Name(name)
+            while self.match("DOT"):
+                expression = FieldAccess(expression, self.expect("IDENT").value)
+            return expression
 
         if self.match("LPAREN"):
             expr = self.parse_expression()

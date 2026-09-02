@@ -1,7 +1,7 @@
 from .ast import (
-    Assignment, BinaryOp, Call, DictLiteral, ExprStmt, ForLoop,
-    FunctionDef, IfStmt, ListLiteral, Name, Number, Program, ReturnStmt,
-    StringLiteral, UnaryOp, VarDecl, WhileLoop,
+    Assignment, BinaryOp, Call, DictLiteral, EnumDef, ExprStmt, FieldAccess,
+    ForLoop, FunctionDef, IfStmt, ListLiteral, Name, Number, Program,
+    ReturnStmt, StringLiteral, StructDef, UnaryOp, UnionDef, VarDecl, WhileLoop,
 )
 
 
@@ -14,6 +14,15 @@ class PythonCodeGenerator(object):
             body = "\n".join("    " + line for line in self.emit_block(node.body).splitlines())
             signature = "def %s(%s):" % (node.name, params)
             return "%s\n%s" % (signature, body)
+        if isinstance(node, (StructDef, UnionDef)):
+            fields = ", ".join(name for name, _ in node.fields)
+            assignments = "\n".join("        self.%s = %s" % (name, name) for name, _ in node.fields)
+            return "class %s:\n    def __init__(self, %s):\n%s" % (node.name, fields, assignments)
+        if isinstance(node, EnumDef):
+            return "class %s:\n%s" % (
+                node.name,
+                "\n".join("    %s = %s" % (name, value) for name, value in node.members),
+            )
         if isinstance(node, VarDecl):
             if node.value is None:
                 return "%s = None" % node.name
@@ -50,6 +59,8 @@ class PythonCodeGenerator(object):
             return "%s(%s)" % (node.callee, args)
         if isinstance(node, Name):
             return node.id
+        if isinstance(node, FieldAccess):
+            return "%s.%s" % (self.emit(node.object_expr), node.field_name)
         if isinstance(node, Number):
             return str(node.value)
         if isinstance(node, StringLiteral):

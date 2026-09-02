@@ -18,6 +18,22 @@ class FunctionDef(Node):
         self.body = body
 
 
+class StructDef(Node):
+    def __init__(self, name, fields):
+        self.name = name
+        self.fields = fields
+
+
+class UnionDef(StructDef):
+    pass
+
+
+class EnumDef(Node):
+    def __init__(self, name, members):
+        self.name = name
+        self.members = members
+
+
 class Param(Node):
     def __init__(self, name, type_name=None):
         self.name = name
@@ -113,6 +129,12 @@ class ListLiteral(Node):
 class DictLiteral(Node):
     def __init__(self, items):
         self.items = items
+
+
+class FieldAccess(Node):
+    def __init__(self, object_expr, field_name):
+        self.object_expr = object_expr
+        self.field_name = field_name
 
 
 Expr = Node

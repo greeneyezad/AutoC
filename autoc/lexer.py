@@ -4,7 +4,8 @@ from typing import List
 KEYWORDS = {
     "fn", "auto", "return", "if", "else", "for", "in", "while",
     "let", "true", "false", "print", "unsafe", "range",
-    "int", "char", "float", "double", "bool", "str", "void", "list", "map"
+    "int", "char", "float", "double", "bool", "str", "void", "list", "map",
+    "struct", "union", "enum"
 }
 
 SINGLE_CHAR_TOKENS = {
