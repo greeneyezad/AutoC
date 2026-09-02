@@ -8,6 +8,7 @@ if ROOT not in sys.path:
 from autoc.interpreter import compile_autoc_to_python, run_autoc_string, compile_autoc_to_llvm
 from autoc.type_inference import infer_types, TypeInferenceError
 from autoc.ownership import OwnershipError, check_ownership
+from autoc.preprocessor import preprocess
 
 
 def test_compile_autoc_to_python():
@@ -99,6 +100,15 @@ def test_ownership_rejects_double_free():
         assert False, "OwnershipError was expected"
     except OwnershipError:
         pass
+
+
+def test_preprocessor_expands_defines_and_includes(tmp_path):
+    header = tmp_path / "constants.autoc"
+    header.write_text("auto offset = 2\n", encoding="utf-8")
+    source = '#include "constants.autoc"\n#define WIDTH 3\nfn main() {\n    print(offset + WIDTH)\n}'
+    expanded = preprocess(source, tmp_path)
+    assert "auto offset = 2" in expanded
+    assert "offset + 3" in expanded
 
 
 def test_llvm_emits_ir_for_function():

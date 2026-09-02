@@ -25,6 +25,11 @@ The language is designed for safe systems programming without losing predictable
 ### Comments
 
 - `#` starts a line comment.
+- `#define NAME value` defines an object-like macro.
+- `#include "file.autoc"` includes a file relative to the current source file.
+
+The preprocessor does not yet support function-like macros, conditional
+compilation, or system-header search paths.
 
 ### Keywords
 

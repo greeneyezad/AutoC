@@ -4,6 +4,7 @@ from .codegen_python import PythonCodeGenerator
 from .lexer import tokenize
 from .llvm_codegen import LLVMCodeGenerator
 from .parser import parse_tokens
+from .preprocessor import preprocess
 from .type_inference import infer_types
 
 
@@ -12,6 +13,7 @@ class AutoCCompileError(Exception):
 
 
 def compile_autoc_to_python(source):
+    source = preprocess(source)
     tokens = tokenize(source)
     program = parse_tokens(tokens)
     generator = PythonCodeGenerator()
@@ -35,14 +37,15 @@ def run_autoc_string(source):
 
 
 def run_autoc_file(path):
-    text = Path(path).read_text(encoding="utf-8")
-    return run_autoc_string(text)
+    source = Path(path)
+    return run_autoc_string(preprocess(source.read_text(encoding="utf-8"), source.parent))
 
 
 def compile_autoc_file(source_path, output_path):
     source = Path(source_path)
     output = Path(output_path)
-    output.write_text(compile_autoc_to_python(source.read_text(encoding="utf-8")), encoding="utf-8")
+    text = preprocess(source.read_text(encoding="utf-8"), source.parent)
+    output.write_text(compile_autoc_to_python(text), encoding="utf-8")
     return output
 
 
@@ -57,7 +60,8 @@ def main():
     parser.add_argument("--run", action="store_true", help="Run the source after compiling it")
     args = parser.parse_args()
 
-    text = Path(args.source).read_text(encoding="utf-8")
+    source = Path(args.source)
+    text = preprocess(source.read_text(encoding="utf-8"), source.parent)
     if args.emit_python:
         print(compile_autoc_to_python(text))
     elif args.emit_llvm:
