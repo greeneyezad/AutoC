@@ -11,6 +11,7 @@ from autoc.ownership import OwnershipError, check_ownership
 from autoc.preprocessor import preprocess
 from autoc.native import find_compiler, normalize_target
 from autoc.c_frontend import compile_c_to_llvm, compile_c_to_python, parse_c, validate_c
+from autoc.abi import generate_c_header
 
 
 def test_compile_autoc_to_python():
@@ -339,3 +340,11 @@ def test_pointer_mutation_updates_addressed_variable():
     namespace = {}
     exec(generated, namespace, namespace)
     namespace["main"]()
+
+
+def test_generates_c_abi_header():
+    source = "fn add(a: int, b: int) -> int { return a + b }\nfn log(value: double) -> void { print(value) }"
+    header = generate_c_header(source)
+    assert "int32_t add(int32_t a, int32_t b);" in header
+    assert "void log(double value);" in header
+    assert "#include <stdint.h>" in header

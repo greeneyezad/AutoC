@@ -7,6 +7,7 @@ from .parser import parse_tokens
 from .preprocessor import preprocess
 from .native import NativeBuildError, build_native
 from .native import TARGET_ALIASES
+from .abi import generate_c_header
 from .type_inference import infer_types
 
 
@@ -68,6 +69,7 @@ def main():
     ]
     parser.add_argument("--target", choices=targets, default="linux-arm64", help="Native target")
     parser.add_argument("--native-compiler", help="Override the native compiler executable")
+    parser.add_argument("--emit-header", help="Write a C ABI header to this path")
     parser.add_argument("--native-kind", choices=["shared", "executable"], default="shared", help="Native output kind")
     parser.add_argument("-o", "--output", help="Write generated Python to this path")
     parser.add_argument("--run", action="store_true", help="Run the source after compiling it")
@@ -76,7 +78,10 @@ def main():
 
     source = Path(args.source)
     text = preprocess(source.read_text(encoding="utf-8"), source.parent, include_paths=args.include_dir)
-    if args.emit_python:
+    if args.emit_header:
+        Path(args.emit_header).write_text(generate_c_header(text), encoding="utf-8")
+        print("Wrote C ABI header -> %s" % args.emit_header)
+    elif args.emit_python:
         print(compile_autoc_to_python(text))
     elif args.emit_llvm:
         print(compile_autoc_to_llvm(text))
