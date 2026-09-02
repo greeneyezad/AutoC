@@ -23,6 +23,7 @@ SINGLE_CHAR_TOKENS = {
     "/": "SLASH",
     "%": "PERCENT",
     "=": "ASSIGN",
+    "^": "CARET",
     "<": "LT",
     ">": "GT",
     "!": "BANG",
@@ -38,6 +39,16 @@ DOUBLE_CHAR_TOKENS = {
     ">=": "GTE",
     "&&": "ANDAND",
     "||": "OROR",
+    "<<": "SHL",
+    ">>": "SHR",
+    "+=": "PLUS_ASSIGN",
+    "-=": "MINUS_ASSIGN",
+    "*=": "STAR_ASSIGN",
+    "/=": "SLASH_ASSIGN",
+    "%=": "PERCENT_ASSIGN",
+    "&=": "AND_ASSIGN",
+    "|=": "OR_ASSIGN",
+    "^=": "XOR_ASSIGN",
 }
 
 

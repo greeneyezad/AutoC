@@ -73,11 +73,17 @@ class Parser:
             return self.parse_while()
         if tok.type == "KEYWORD" and tok.value in {"auto", "let"}:
             return self.parse_var_decl()
+        if tok.type == "KEYWORD" and tok.value in {"int", "char", "float", "double", "bool", "str", "void"}:
+            return self.parse_typed_decl()
         if tok.type == "KEYWORD" and tok.value in {"print", "range"}:
             return ExprStmt(self.parse_expression())
 
         if tok.type == "IDENT":
-            if self.peek(1) is not None and self.peek(1).type == "ASSIGN":
+            if self.peek(1) is not None and self.peek(1).type in {
+                "ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN",
+                "SLASH_ASSIGN", "PERCENT_ASSIGN", "AND_ASSIGN",
+                "OR_ASSIGN", "XOR_ASSIGN",
+            }:
                 return self.parse_assignment()
             expr = self.parse_expression()
             return ExprStmt(expr)
@@ -124,10 +130,26 @@ class Parser:
         value = self.parse_expression()
         return VarDecl(name_tok.value, value, type_name, auto=True)
 
+    def parse_typed_decl(self):
+        type_name = self.parse_type_name()
+        name_tok = self.expect("IDENT")
+        value = None
+        if self.match("ASSIGN"):
+            value = self.parse_expression()
+        return VarDecl(name_tok.value, value, type_name, auto=False)
+
     def parse_assignment(self):
         name_tok = self.expect("IDENT")
-        self.expect("ASSIGN")
+        operator = self.advance()
+        if operator is None or operator.type not in {
+            "ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN",
+            "SLASH_ASSIGN", "PERCENT_ASSIGN", "AND_ASSIGN",
+            "OR_ASSIGN", "XOR_ASSIGN",
+        }:
+            raise ParserError("Expected assignment operator")
         value = self.parse_expression()
+        if operator.type != "ASSIGN":
+            value = BinaryOp(operator.value[:-1], Name(name_tok.value), value)
         return Assignment(name_tok.value, value)
 
     def parse_return(self):
@@ -166,7 +188,7 @@ class Parser:
 
     def parse_or(self):
         left = self.parse_and()
-        while self.match("OROR"):
+        while self.current() is not None and self.current().type == "OROR":
             op = self.advance().value
             right = self.parse_and()
             left = BinaryOp(op, left, right)
@@ -174,18 +196,39 @@ class Parser:
 
     def parse_and(self):
         left = self.parse_equality()
-        while self.match("ANDAND"):
+        while self.current() is not None and self.current().type == "ANDAND":
             op = self.advance().value
             right = self.parse_equality()
             left = BinaryOp(op, left, right)
         return left
 
     def parse_equality(self):
-        left = self.parse_relational()
+        left = self.parse_bitwise_or()
         while self.current() is not None and self.current().type in {"EQ", "NEQ"}:
             op = self.advance().value
-            right = self.parse_relational()
+            right = self.parse_bitwise_or()
             left = BinaryOp(op, left, right)
+        return left
+
+    def parse_bitwise_or(self):
+        left = self.parse_bitwise_xor()
+        while self.current() is not None and self.current().type == "PIPE":
+            op = self.advance().value
+            left = BinaryOp(op, left, self.parse_bitwise_xor())
+        return left
+
+    def parse_bitwise_xor(self):
+        left = self.parse_bitwise_and()
+        while self.current() is not None and self.current().type == "CARET":
+            op = self.advance().value
+            left = BinaryOp(op, left, self.parse_bitwise_and())
+        return left
+
+    def parse_bitwise_and(self):
+        left = self.parse_relational()
+        while self.current() is not None and self.current().type == "AMP":
+            op = self.advance().value
+            left = BinaryOp(op, left, self.parse_relational())
         return left
 
     def parse_relational(self):
@@ -197,11 +240,18 @@ class Parser:
         return left
 
     def parse_additive(self):
-        left = self.parse_multiplicative()
+        left = self.parse_shift()
         while self.current() is not None and self.current().type in {"PLUS", "MINUS"}:
             op = self.advance().value
-            right = self.parse_multiplicative()
+            right = self.parse_shift()
             left = BinaryOp(op, left, right)
+        return left
+
+    def parse_shift(self):
+        left = self.parse_multiplicative()
+        while self.current() is not None and self.current().type in {"SHL", "SHR"}:
+            op = self.advance().value
+            left = BinaryOp(op, left, self.parse_multiplicative())
         return left
 
     def parse_multiplicative(self):

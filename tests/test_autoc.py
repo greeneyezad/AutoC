@@ -109,3 +109,18 @@ def test_llvm_maps_c_core_types():
     assert generator.map_type("char") == "i8"
     assert generator.map_type("double") == "double"
     assert generator.map_type("void") == "void"
+
+
+def test_c_declarations_compound_assignments_and_operators():
+    src = '''
+    fn main() {
+        int value = 1
+        value += 3
+        value = (value << 1) | 1
+        print(value)
+    }
+    '''
+    output = compile_autoc_to_python(src)
+    assert "value = 1" in output
+    assert "value = (value + 3)" in output
+    assert "value = ((value << 1) | 1)" in output
