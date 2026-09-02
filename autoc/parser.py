@@ -297,7 +297,7 @@ class Parser:
         tok = self.current()
         if tok is None:
             raise ParserError("Missing type name")
-        if tok.type == "IDENT" or (tok.type == "KEYWORD" and tok.value in {"int", "float", "bool", "str", "list", "map"}):
+        if tok.type == "IDENT" or (tok.type == "KEYWORD" and tok.value in {"int", "char", "float", "double", "bool", "str", "void", "list", "map"}):
             self.advance()
             return tok.value
         raise ParserError(f"Invalid type name: {tok}")

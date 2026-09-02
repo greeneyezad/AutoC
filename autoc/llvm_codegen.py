@@ -20,11 +20,17 @@ class LLVMCodeGenerator(object):
 
         for stmt in body:
             if getattr(stmt, "__class__", None).__name__ == "ReturnStmt":
-                value = self._expr_name(stmt.value) if stmt.value is not None else "0"
-                self.lines.append(f"  ret {self.map_type(return_type)} {value}")
+                if return_type == "void":
+                    self.lines.append("  ret void")
+                else:
+                    value = self._expr_name(stmt.value) if stmt.value is not None else "0"
+                    self.lines.append(f"  ret {self.map_type(return_type)} {value}")
                 break
         else:
-            self.lines.append(f"  ret {self.map_type(return_type)} 0")
+            if return_type == "void":
+                self.lines.append("  ret void")
+            else:
+                self.lines.append(f"  ret {self.map_type(return_type)} 0")
 
         self.lines.append("}")
         return "\n".join(self.lines)
@@ -41,8 +47,13 @@ class LLVMCodeGenerator(object):
     def map_type(self, type_name):
         mapping = {
             "int": "i32",
+            "char": "i8",
             "float": "double",
+            "double": "double",
             "bool": "i1",
             "str": "i8*",
+            "void": "void",
         }
-        return mapping.get(type_name, "i32")
+        if type_name not in mapping:
+            raise ValueError("Unsupported AutoC type: %s" % type_name)
+        return mapping[type_name]

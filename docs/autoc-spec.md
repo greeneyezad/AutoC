@@ -43,9 +43,12 @@ The language is designed for safe systems programming without losing predictable
 Built-in types include:
 
 - `int`
+- `char`
 - `float`
+- `double`
 - `bool`
 - `str`
+- `void` for functions that do not return a value
 - `list[T]`
 - `map[K, V]`
 

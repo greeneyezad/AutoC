@@ -84,3 +84,28 @@ def test_llvm_emits_ir_for_function():
     llvm = compile_autoc_to_llvm(src)
     assert "define i32 @add" in llvm
     assert "ret i32" in llvm
+
+
+def test_c_core_types_parse_and_lower_to_llvm():
+    src = '''
+    fn widen(value: double) -> double {
+        return value
+    }
+
+    fn emit(letter: char) -> void {
+        print(letter)
+    }
+    '''
+    program = infer_types(src)
+    assert program.items[0].params[0].type_name == "double"
+    assert program.items[1].return_type == "void"
+    assert "define double @widen" in compile_autoc_to_llvm(src)
+
+
+def test_llvm_maps_c_core_types():
+    from autoc.llvm_codegen import LLVMCodeGenerator
+
+    generator = LLVMCodeGenerator()
+    assert generator.map_type("char") == "i8"
+    assert generator.map_type("double") == "double"
+    assert generator.map_type("void") == "void"
