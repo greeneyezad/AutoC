@@ -59,7 +59,11 @@ def main():
     parser.add_argument("--emit-python", action="store_true", help="Print generated Python instead of executing")
     parser.add_argument("--emit-llvm", action="store_true", help="Print generated LLVM IR instead of executing")
     parser.add_argument("--emit-native", action="store_true", help="Build a native shared library")
-    targets = ["linux-arm64", "linux-aarch64", "android-arm64", "android-arm64-v8a"]
+    targets = [
+        "linux-arm64", "linux-aarch64", "aarch64", "arm64",
+        "linux-amd64", "linux-x86_64", "amd64", "x86_64",
+        "android-arm64", "android-arm64-v8a", "android-amd64",
+    ]
     parser.add_argument("--target", choices=targets, default="linux-arm64", help="Native target")
     parser.add_argument("--native-compiler", help="Override the native compiler executable")
     parser.add_argument("-o", "--output", help="Write generated Python to this path")

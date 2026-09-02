@@ -173,7 +173,12 @@ def test_native_target_compiler_selection(monkeypatch):
     monkeypatch.setattr("autoc.native.shutil.which", lambda name: "clang-path" if name == "clang" else None)
     assert find_compiler("linux-arm64") == "clang-path"
     assert normalize_target("linux-aarch64") == "linux-arm64"
+    assert normalize_target("aarch64") == "linux-arm64"
+    assert normalize_target("arm64") == "linux-arm64"
+    assert normalize_target("amd64") == "linux-amd64"
+    assert normalize_target("x86_64") == "linux-amd64"
     assert normalize_target("android-arm64-v8a") == "android-arm64"
+    assert normalize_target("android-amd64") == "android-x86_64"
 
 
 def test_c_frontend_parses_core_c_translation_unit():

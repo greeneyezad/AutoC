@@ -10,7 +10,13 @@ class NativeBuildError(RuntimeError):
 
 TARGET_ALIASES = {
     "linux-aarch64": "linux-arm64",
+    "aarch64": "linux-arm64",
+    "arm64": "linux-arm64",
+    "linux-x86_64": "linux-amd64",
+    "amd64": "linux-amd64",
+    "x86_64": "linux-amd64",
     "android-arm64-v8a": "android-arm64",
+    "android-amd64": "android-x86_64",
 }
 
 
@@ -22,19 +28,18 @@ def find_compiler(target, compiler=None):
     target = normalize_target(target)
     if compiler:
         return compiler
-    if target == "linux-arm64":
+    if target in {"linux-arm64", "linux-amd64"}:
         return shutil.which("clang")
-    if target == "android-arm64":
+    if target in {"android-arm64", "android-x86_64"}:
         ndk = os.environ.get("ANDROID_NDK_HOME")
         if ndk:
             tool_dir = Path(ndk) / "toolchains" / "llvm" / "prebuilt" / "windows-x86_64" / "bin"
-            candidate = tool_dir / "aarch64-linux-android24-clang.cmd"
-            if candidate.is_file():
-                return str(candidate)
-            candidate = tool_dir / "aarch64-linux-android24-clang"
-            if candidate.is_file():
-                return str(candidate)
-        return shutil.which("aarch64-linux-android24-clang")
+            prefixes = {"android-arm64": "aarch64-linux-android", "android-x86_64": "x86_64-linux-android"}
+            for suffix in (".cmd", ""):
+                candidate = tool_dir / (prefixes[target] + "24-clang" + suffix)
+                if candidate.is_file():
+                    return str(candidate)
+        return shutil.which("%s24-clang" % ("aarch64-linux-android" if target == "android-arm64" else "x86_64-linux-android"))
     raise NativeBuildError("Unsupported native target: %s" % target)
 
 
@@ -44,8 +49,8 @@ def build_native(source, output, target="linux-arm64", compiler=None):
 
     compiler_path = find_compiler(target, compiler)
     if compiler_path is None:
-        hint = "Install LLVM/Clang for Linux AArch64"
-        if target == "android-arm64":
+        hint = "Install LLVM/Clang for Linux AArch64 or AMD64"
+        if target in {"android-arm64", "android-x86_64"}:
             hint = "Install the Android NDK and set ANDROID_NDK_HOME"
         raise NativeBuildError("No compiler found for %s. %s." % (target, hint))
 
@@ -59,6 +64,8 @@ def build_native(source, output, target="linux-arm64", compiler=None):
     command = [compiler_path]
     if target == "linux-arm64":
         command.append("--target=aarch64-linux-gnu")
+    elif target == "linux-amd64":
+        command.append("--target=x86_64-linux-gnu")
     command.extend(["-shared", "-fPIC", "-x", "ir", ir_path, "-o", str(output)])
     try:
         subprocess.run(command, check=True)
