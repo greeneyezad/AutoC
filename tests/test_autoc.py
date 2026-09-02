@@ -323,3 +323,19 @@ def test_safe_pointers_and_memory_helpers():
     namespace = {}
     exec(output, namespace, namespace)
     namespace["main"]()
+
+
+def test_pointer_mutation_updates_addressed_variable():
+    src = '''
+    fn main() {
+        int value = 41
+        auto pointer = &value
+        *pointer = 42
+        print(value)
+    }
+    '''
+    generated = compile_autoc_to_python(src)
+    assert "(pointer).set(42)" in generated
+    namespace = {}
+    exec(generated, namespace, namespace)
+    namespace["main"]()

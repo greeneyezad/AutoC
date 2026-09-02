@@ -84,6 +84,16 @@ class Parser:
         if tok.type == "KEYWORD" and tok.value in {"print", "range"}:
             return ExprStmt(self.parse_expression())
 
+        if tok.type == "STAR":
+            target = self.parse_unary()
+            operator = self.advance()
+            if operator is None or operator.type not in {"ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN"}:
+                raise ParserError("Expected assignment operator after dereference")
+            value = self.parse_expression()
+            if operator.type != "ASSIGN":
+                value = BinaryOp(operator.value[:-1], target, value)
+            return Assignment(target, value)
+
         if tok.type == "IDENT":
             if self.peek(1) is not None and self.peek(1).type in {
                 "ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "STAR_ASSIGN",
@@ -291,6 +301,14 @@ class Parser:
     def parse_multiplicative(self):
         left = self.parse_unary()
         while self.current() is not None and self.current().type in {"STAR", "SLASH", "PERCENT"}:
+            if (
+                self.current().type == "STAR"
+                and self.peek(1) is not None
+                and self.peek(1).type == "IDENT"
+                and self.peek(2) is not None
+                and self.peek(2).type in {"ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN"}
+            ):
+                break
             op = self.advance().value
             right = self.parse_unary()
             left = BinaryOp(op, left, right)
