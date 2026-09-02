@@ -10,6 +10,7 @@ from autoc.type_inference import infer_types, TypeInferenceError
 from autoc.ownership import OwnershipError, check_ownership
 from autoc.preprocessor import preprocess
 from autoc.native import find_compiler, normalize_target
+from autoc.c_frontend import parse_c, validate_c
 
 
 def test_compile_autoc_to_python():
@@ -173,6 +174,23 @@ def test_native_target_compiler_selection(monkeypatch):
     assert find_compiler("linux-arm64") == "clang-path"
     assert normalize_target("linux-aarch64") == "linux-arm64"
     assert normalize_target("android-arm64-v8a") == "android-arm64"
+
+
+def test_c_frontend_parses_core_c_translation_unit():
+    source = '''
+    typedef struct Point { int x; int y; } Point;
+    enum Color { RED, GREEN = 4, BLUE };
+    int add(int left, int right) { return left + right; }
+    int main(void) {
+        Point point = {1, 2};
+        int *value = &point.x;
+        for (int index = 0; index < 2; index++) { point.x += index; }
+        return add(*value, BLUE);
+    }
+    '''
+    tree = parse_c(source, "compat.c")
+    assert validate_c(source)
+    assert len(tree.ext) == 4
 
 
 def test_llvm_emits_ir_for_function():
