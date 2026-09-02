@@ -74,6 +74,33 @@ def test_ownership_rejects_move_after_use():
         pass
 
 
+def test_ownership_allows_use_before_move():
+    src = '''
+    fn main() {
+        auto a = [1, 2, 3]
+        print(a)
+        auto b = a
+        print(b)
+    }
+    '''
+    assert check_ownership(src)
+
+
+def test_ownership_rejects_double_free():
+    src = '''
+    fn main() {
+        auto buffer = malloc(4)
+        free(buffer)
+        free(buffer)
+    }
+    '''
+    try:
+        check_ownership(src)
+        assert False, "OwnershipError was expected"
+    except OwnershipError:
+        pass
+
+
 def test_llvm_emits_ir_for_function():
     src = '''
     fn add(a: int, b: int) -> int {

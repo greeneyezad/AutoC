@@ -143,6 +143,11 @@ AutoC uses a simplified ownership model:
 
 This is intentionally simpler than Rust but consistent with the safety goal.
 
+The ownership checker tracks list, map, and `malloc` results. Assigning one of
+these values to another variable moves ownership; using the original afterward
+is rejected. `free` consumes an owned allocation and double-free or freeing an
+unowned value is rejected.
+
 ## 8. Type inference
 
 The compiler infers variable types from initial values. For example:
