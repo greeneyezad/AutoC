@@ -53,6 +53,10 @@ class PythonCodeGenerator(object):
         if isinstance(node, BinaryOp):
             return "(%s %s %s)" % (self.emit(node.left), node.op, self.emit(node.right))
         if isinstance(node, UnaryOp):
+            if node.op == "&":
+                return "_AutoCPointer(lambda: %s)" % self.emit(node.value)
+            if node.op == "*":
+                return "(%s).get()" % self.emit(node.value)
             return "(%s%s)" % (node.op, self.emit(node.value))
         if isinstance(node, Call):
             args = ", ".join(self.emit(arg) for arg in node.args)
@@ -77,6 +81,17 @@ class PythonCodeGenerator(object):
 
     def emit_program(self, program):
         code = self.emit(program)
+        code = (
+            "class _AutoCPointer:\n"
+            "    def __init__(self, getter):\n"
+            "        self._getter = getter\n"
+            "    def get(self):\n"
+            "        return self._getter()\n\n"
+            "def malloc(size):\n"
+            "    return bytearray(size)\n\n"
+            "def free(value):\n"
+            "    return None\n\n" + code
+        )
         has_main = any(
             isinstance(item, FunctionDef) and item.name == "main"
             for item in program.items

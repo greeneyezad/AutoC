@@ -66,6 +66,10 @@ enum Color { RED, GREEN = 4, BLUE }
 Struct and union values use Python objects during interpretation. Union storage
 and C ABI layout are reserved for the native backend.
 
+The Python backend provides managed pointer reads with `&value` and `*pointer`,
+plus `malloc(size)` and `free(value)` helpers. Raw pointer arithmetic and writes
+through dereferenced pointers require the native backend.
+
 The language supports inferred local type declarations using `auto`:
 
 ```autoc

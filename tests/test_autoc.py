@@ -149,3 +149,19 @@ def test_struct_union_enum_and_field_access():
     exec(output, namespace, namespace)
     assert namespace["Point"](2, 3).x == 2
     assert namespace["Color"].BLUE == 5
+
+
+def test_safe_pointers_and_memory_helpers():
+    src = '''
+    fn main() {
+        int value = 41
+        auto pointer = &value
+        print(*pointer + 1)
+        auto buffer = malloc(4)
+        free(buffer)
+    }
+    '''
+    output = compile_autoc_to_python(src)
+    namespace = {}
+    exec(output, namespace, namespace)
+    namespace["main"]()

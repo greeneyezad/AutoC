@@ -297,7 +297,7 @@ class Parser:
         return left
 
     def parse_unary(self):
-        if self.current() is not None and self.current().type in {"PLUS", "MINUS", "BANG"}:
+        if self.current() is not None and self.current().type in {"PLUS", "MINUS", "BANG", "AMP", "STAR"}:
             op = self.advance().value
             return UnaryOp(op, self.parse_unary())
         return self.parse_primary()
