@@ -128,6 +128,23 @@ def test_preprocessor_supports_function_macros_and_conditionals(tmp_path):
     assert "auto result = 0" not in expanded
 
 
+def test_c_standard_library_equivalents():
+    src = '''
+    fn main() {
+        auto text = "42"
+        auto buffer = malloc(3)
+        memset(buffer, 65, 3)
+        print(strlen(text))
+        print(atoi(text) + 1)
+        puts("ok")
+        free(buffer)
+    }
+    '''
+    namespace = {}
+    exec(compile_autoc_to_python(src), namespace, namespace)
+    namespace["main"]()
+
+
 def test_llvm_emits_ir_for_function():
     src = '''
     fn add(a: int, b: int) -> int {

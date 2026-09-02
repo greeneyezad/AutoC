@@ -34,6 +34,10 @@ The language is designed for safe systems programming without losing predictable
 Macro expansion is intentionally limited to object-like and simple
 function-like macros; token pasting and stringification are not supported.
 
+The generated Python backend provides C-style library equivalents for
+`strlen`, `atoi`, `atof`, `puts`, `putchar`, `printf`, `memset`, and `memcpy`,
+as well as managed `malloc` and `free`.
+
 ### Keywords
 
 - `fn`, `auto`, `let`, `return`, `if`, `else`, `for`, `in`, `while`, `true`, `false`, `print`, `unsafe`, `range`

@@ -82,6 +82,7 @@ class PythonCodeGenerator(object):
     def emit_program(self, program):
         code = self.emit(program)
         code = (
+            "import math\n\n"
             "class _AutoCPointer:\n"
             "    def __init__(self, getter):\n"
             "        self._getter = getter\n"
@@ -91,6 +92,26 @@ class PythonCodeGenerator(object):
             "    return bytearray(size)\n\n"
             "def free(value):\n"
             "    return None\n\n" + code
+        )
+        code = (
+            "def strlen(value):\n"
+            "    return len(value)\n\n"
+            "def atoi(value):\n"
+            "    return int(value)\n\n"
+            "def atof(value):\n"
+            "    return float(value)\n\n"
+            "def puts(value):\n"
+            "    print(value)\n\n"
+            "def putchar(value):\n"
+            "    print(value, end=\"\")\n\n"
+            "def printf(format_string, *args):\n"
+            "    print(format_string % args, end=\"\")\n\n"
+            "def memset(buffer, value, count):\n"
+            "    buffer[:count] = bytes([value]) * count\n"
+            "    return buffer\n\n"
+            "def memcpy(destination, source, count):\n"
+            "    destination[:count] = source[:count]\n"
+            "    return destination\n\n" + code
         )
         has_main = any(
             isinstance(item, FunctionDef) and item.name == "main"
