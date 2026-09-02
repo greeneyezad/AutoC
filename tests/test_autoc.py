@@ -111,6 +111,23 @@ def test_preprocessor_expands_defines_and_includes(tmp_path):
     assert "offset + 3" in expanded
 
 
+def test_preprocessor_supports_function_macros_and_conditionals(tmp_path):
+    header = tmp_path / "system.autoc"
+    header.write_text("#define SCALE(x) ((x) * 2)\n", encoding="utf-8")
+    source = '''
+    #include <system.autoc>
+    #define ENABLED 1
+    #if ENABLED
+    auto result = SCALE(3)
+    #else
+    auto result = 0
+    #endif
+    '''
+    expanded = preprocess(source, tmp_path, include_paths=[tmp_path])
+    assert "auto result = ((3) * 2)" in expanded
+    assert "auto result = 0" not in expanded
+
+
 def test_llvm_emits_ir_for_function():
     src = '''
     fn add(a: int, b: int) -> int {

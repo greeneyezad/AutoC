@@ -26,10 +26,13 @@ The language is designed for safe systems programming without losing predictable
 
 - `#` starts a line comment.
 - `#define NAME value` defines an object-like macro.
+- `#define NAME(args) value` defines a function-like macro.
 - `#include "file.autoc"` includes a file relative to the current source file.
+- `#include <file.autoc>` searches the source directory and `-I` include paths.
+- `#if`, `#ifdef`, `#ifndef`, `#else`, and `#endif` select conditional source.
 
-The preprocessor does not yet support function-like macros, conditional
-compilation, or system-header search paths.
+Macro expansion is intentionally limited to object-like and simple
+function-like macros; token pasting and stringification are not supported.
 
 ### Keywords
 
