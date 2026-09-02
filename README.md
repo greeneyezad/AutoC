@@ -43,13 +43,20 @@ fn main() {
 - `autoc/codegen_python.py` - emits Python source from the AST
 - `autoc/interpreter.py` - compiles and runs AutoC source
 
-## Running the interpreter
+## Compiling and running
 
 ```bash
-python -m autoc examples/hello.autoc
+python -m autoc examples/hello.autoc -o hello.py
+python hello.py
 ```
 
-Or emit Python:
+Compile and run in one step:
+
+```bash
+python -m autoc examples/hello.autoc -o hello.py --run
+```
+
+To inspect generated Python without writing a file:
 
 ```bash
 python -m autoc examples/hello.autoc --emit-python
@@ -72,4 +79,4 @@ The project direction and milestones are tracked in `ROADMAP.md`.
 
 ## Status
 
-This is an early prototype, not yet a production compiler. It is intentionally small, readable, and designed to be extended.
+This is an early prototype that compiles the supported AutoC subset to standalone Python. It is intentionally small, readable, and designed to be extended.

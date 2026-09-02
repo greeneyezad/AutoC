@@ -65,4 +65,11 @@ class PythonCodeGenerator(object):
         return "\n".join(self.emit(stmt) for stmt in block)
 
     def emit_program(self, program):
-        return self.emit(program)
+        code = self.emit(program)
+        has_main = any(
+            isinstance(item, FunctionDef) and item.name == "main"
+            for item in program.items
+        )
+        if has_main:
+            code += "\n\nif __name__ == \"__main__\":\n    main()"
+        return code

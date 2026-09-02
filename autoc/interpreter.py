@@ -39,13 +39,22 @@ def run_autoc_file(path):
     return run_autoc_string(text)
 
 
+def compile_autoc_file(source_path, output_path):
+    source = Path(source_path)
+    output = Path(output_path)
+    output.write_text(compile_autoc_to_python(source.read_text(encoding="utf-8")), encoding="utf-8")
+    return output
+
+
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="AutoC minimal interpreter")
+    parser = argparse.ArgumentParser(description="Compile and run AutoC programs")
     parser.add_argument("source", help="Path to .autoc source file")
     parser.add_argument("--emit-python", action="store_true", help="Print generated Python instead of executing")
     parser.add_argument("--emit-llvm", action="store_true", help="Print generated LLVM IR instead of executing")
+    parser.add_argument("-o", "--output", help="Write generated Python to this path")
+    parser.add_argument("--run", action="store_true", help="Run the source after compiling it")
     args = parser.parse_args()
 
     text = Path(args.source).read_text(encoding="utf-8")
@@ -53,9 +62,13 @@ def main():
         print(compile_autoc_to_python(text))
     elif args.emit_llvm:
         print(compile_autoc_to_llvm(text))
+    elif args.output:
+        output = compile_autoc_file(args.source, args.output)
+        print("Compiled %s -> %s" % (args.source, output))
+        if args.run:
+            run_autoc_string(text)
     else:
-        ns = run_autoc_string(text)
-        print(ns)
+        run_autoc_string(text)
 
 
 if __name__ == "__main__":
