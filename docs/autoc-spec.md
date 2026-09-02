@@ -38,6 +38,16 @@ The generated Python backend provides C-style library equivalents for
 `strlen`, `atoi`, `atof`, `puts`, `putchar`, `printf`, `memset`, and `memcpy`,
 as well as managed `malloc` and `free`.
 
+Native builds use Clang through the LLVM backend:
+
+```text
+python -m autoc program.autoc --emit-native --target linux-arm64 -o libprogram.so
+python -m autoc program.autoc --emit-native --target android-arm64 -o libprogram.so
+```
+
+The Linux target requires Clang. The Android target requires the Android NDK
+with `ANDROID_NDK_HOME` set; its ABI is `arm64-v8a`.
+
 ### Keywords
 
 - `fn`, `auto`, `let`, `return`, `if`, `else`, `for`, `in`, `while`, `true`, `false`, `print`, `unsafe`, `range`

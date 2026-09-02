@@ -9,6 +9,7 @@ from autoc.interpreter import compile_autoc_to_python, run_autoc_string, compile
 from autoc.type_inference import infer_types, TypeInferenceError
 from autoc.ownership import OwnershipError, check_ownership
 from autoc.preprocessor import preprocess
+from autoc.native import find_compiler
 
 
 def test_compile_autoc_to_python():
@@ -165,6 +166,11 @@ def test_llvm_lowers_calls_and_control_flow():
     assert "call i32 @add" in llvm
     assert "br i1" in llvm
     assert "while_body" in llvm
+
+
+def test_native_target_compiler_selection(monkeypatch):
+    monkeypatch.setattr("autoc.native.shutil.which", lambda name: "clang-path" if name == "clang" else None)
+    assert find_compiler("linux-arm64") == "clang-path"
 
 
 def test_llvm_emits_ir_for_function():

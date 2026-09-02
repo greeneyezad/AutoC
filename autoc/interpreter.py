@@ -5,6 +5,7 @@ from .lexer import tokenize
 from .llvm_codegen import LLVMCodeGenerator
 from .parser import parse_tokens
 from .preprocessor import preprocess
+from .native import NativeBuildError, build_native
 from .type_inference import infer_types
 
 
@@ -56,6 +57,9 @@ def main():
     parser.add_argument("source", help="Path to .autoc source file")
     parser.add_argument("--emit-python", action="store_true", help="Print generated Python instead of executing")
     parser.add_argument("--emit-llvm", action="store_true", help="Print generated LLVM IR instead of executing")
+    parser.add_argument("--emit-native", action="store_true", help="Build a native shared library")
+    parser.add_argument("--target", choices=["linux-arm64", "android-arm64"], default="linux-arm64", help="Native target")
+    parser.add_argument("--native-compiler", help="Override the native compiler executable")
     parser.add_argument("-o", "--output", help="Write generated Python to this path")
     parser.add_argument("--run", action="store_true", help="Run the source after compiling it")
     parser.add_argument("-I", "--include-dir", action="append", default=[], help="Add a header search directory")
@@ -67,6 +71,14 @@ def main():
         print(compile_autoc_to_python(text))
     elif args.emit_llvm:
         print(compile_autoc_to_llvm(text))
+    elif args.emit_native:
+        if not args.output:
+            parser.error("--emit-native requires -o/--output")
+        try:
+            output = build_native(text, args.output, args.target, args.native_compiler)
+        except NativeBuildError as error:
+            parser.error(str(error))
+        print("Built %s -> %s" % (args.target, output))
     elif args.output:
         output = compile_autoc_file(args.source, args.output, args.include_dir)
         print("Compiled %s -> %s" % (args.source, output))
