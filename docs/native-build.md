@@ -37,3 +37,7 @@ selected automatically for either ABI.
 The `.c` file beside the example is a reference implementation used for
 compatibility review. AutoC does not yet accept arbitrary legacy C source; it
 accepts the documented AutoC syntax and emits native code from that syntax.
+
+The manual GitHub Actions workflow `.github/workflows/native-builds.yml` builds
+Linux AMD64/AArch64 and Android ARM64/x86_64 artifacts and uploads the shared
+libraries as workflow artifacts.

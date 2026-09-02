@@ -10,7 +10,7 @@ from autoc.type_inference import infer_types, TypeInferenceError
 from autoc.ownership import OwnershipError, check_ownership
 from autoc.preprocessor import preprocess
 from autoc.native import find_compiler, normalize_target
-from autoc.c_frontend import compile_c_to_python, parse_c, validate_c
+from autoc.c_frontend import compile_c_to_llvm, compile_c_to_python, parse_c, validate_c
 
 
 def test_compile_autoc_to_python():
@@ -179,6 +179,10 @@ def test_native_target_compiler_selection(monkeypatch):
     assert normalize_target("x86_64") == "linux-amd64"
     assert normalize_target("android-arm64-v8a") == "android-arm64"
     assert normalize_target("android-amd64") == "android-x86_64"
+    assert normalize_target("arm32") == "linux-arm"
+    assert normalize_target("x86") == "linux-i386"
+    assert normalize_target("android-arm32") == "android-arm"
+    assert normalize_target("android-x86") == "android-i386"
 
 
 def test_c_frontend_parses_core_c_translation_unit():
@@ -219,6 +223,13 @@ def test_c_frontend_translates_printf_and_include_lines():
     namespace = {}
     exec(generated, namespace, namespace)
     assert namespace["main"]() == 0
+
+
+def test_c_frontend_lowers_simple_function_to_llvm():
+    source = "int add(int left, int right) { return left + right; }"
+    llvm = compile_c_to_llvm(source)
+    assert "define i32 @add" in llvm
+    assert "add i32" in llvm
 
 
 def test_llvm_emits_ir_for_function():

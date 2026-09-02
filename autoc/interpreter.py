@@ -62,10 +62,13 @@ def main():
     targets = [
         "linux-arm64", "linux-aarch64", "aarch64", "arm64",
         "linux-amd64", "linux-x86_64", "amd64", "x86_64",
+        "linux-arm32", "arm32", "linux-x86", "x86",
         "android-arm64", "android-arm64-v8a", "android-amd64",
+        "android-arm32", "android-x86",
     ]
     parser.add_argument("--target", choices=targets, default="linux-arm64", help="Native target")
     parser.add_argument("--native-compiler", help="Override the native compiler executable")
+    parser.add_argument("--native-kind", choices=["shared", "executable"], default="shared", help="Native output kind")
     parser.add_argument("-o", "--output", help="Write generated Python to this path")
     parser.add_argument("--run", action="store_true", help="Run the source after compiling it")
     parser.add_argument("-I", "--include-dir", action="append", default=[], help="Add a header search directory")
@@ -81,7 +84,7 @@ def main():
         if not args.output:
             parser.error("--emit-native requires -o/--output")
         try:
-            output = build_native(text, args.output, args.target, args.native_compiler)
+            output = build_native(text, args.output, args.target, args.native_compiler, args.native_kind)
         except NativeBuildError as error:
             parser.error(str(error))
         print("Built %s -> %s" % (args.target, output))

@@ -1,0 +1,56 @@
+name: Native builds
+
+on:
+  workflow_dispatch:
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-amd64
+            compiler: clang
+          - target: linux-arm64
+            compiler: clang
+          - target: android-arm64
+            compiler: aarch64-linux-android24-clang
+          - target: android-x86_64
+            compiler: x86_64-linux-android24-clang
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Install LLVM
+        if: startsWith(matrix.target, 'linux-')
+        run: sudo apt-get update && sudo apt-get install -y clang
+
+      - name: Set up Android NDK
+        if: startsWith(matrix.target, 'android-')
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        if: startsWith(matrix.target, 'android-')
+        uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: r27c
+
+      - name: Build native library
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+        run: |
+          python -m autoc examples/compat/sum.autoc --emit-native --target "${{ matrix.target }}" --native-compiler "${{ matrix.compiler }}" --output "libsum-${{ matrix.target }}.so"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: autoc-${{ matrix.target }}
+          path: libsum-${{ matrix.target }}.so

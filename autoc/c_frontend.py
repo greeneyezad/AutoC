@@ -45,6 +45,15 @@ def compile_c_to_python(source, filename="<string>"):
     return generate_python(parse_c(clean_source, filename))
 
 
+def compile_c_to_llvm(source, filename="<string>"):
+    from .c_codegen_llvm import compile_c_to_llvm as generate_llvm
+
+    clean_source = "\n".join(
+        line for line in source.splitlines() if not line.lstrip().startswith("#")
+    )
+    return generate_llvm(parse_c(clean_source, filename))
+
+
 if __name__ == "__main__":
     import argparse
     from pycparser import c_generator

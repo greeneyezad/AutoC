@@ -15,3 +15,7 @@ structs, unions, enums, and control flow. `compile_c_to_python` translates the
 common executable subset into standalone Python and strips simple preprocessor
 lines such as `#include`. Unsupported C constructs raise `CCodegenError`
 instead of being silently changed.
+
+`compile_c_to_llvm` lowers the same supported subset through AutoC's LLVM
+backend. It currently targets integer arithmetic, calls, returns, and basic
+control flow; unsupported C AST nodes raise `CLLVMError`.
