@@ -11,6 +11,7 @@ assert validate_c("int main(void) { return 0; }")
 
 The frontend accepts C translation units and returns the standard pycparser
 AST, including declarations, expressions, functions, arrays, pointers,
-structs, unions, enums, and control flow. It expects preprocessor directives
-to be expanded before parsing. Translation from this C AST into AutoC's typed
-AST and native LLVM ABI is the next frontend stage.
+structs, unions, enums, and control flow. `compile_c_to_python` translates the
+common executable subset into standalone Python and strips simple preprocessor
+lines such as `#include`. Unsupported C constructs raise `CCodegenError`
+instead of being silently changed.

@@ -36,6 +36,15 @@ def validate_c(source, filename="<string>"):
     return isinstance(tree, c_ast.FileAST)
 
 
+def compile_c_to_python(source, filename="<string>"):
+    from .c_codegen_python import compile_c_to_python as generate_python
+
+    clean_source = "\n".join(
+        line for line in source.splitlines() if not line.lstrip().startswith("#")
+    )
+    return generate_python(parse_c(clean_source, filename))
+
+
 if __name__ == "__main__":
     import argparse
     from pycparser import c_generator

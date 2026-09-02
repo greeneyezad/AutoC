@@ -10,7 +10,7 @@ from autoc.type_inference import infer_types, TypeInferenceError
 from autoc.ownership import OwnershipError, check_ownership
 from autoc.preprocessor import preprocess
 from autoc.native import find_compiler, normalize_target
-from autoc.c_frontend import parse_c, validate_c
+from autoc.c_frontend import compile_c_to_python, parse_c, validate_c
 
 
 def test_compile_autoc_to_python():
@@ -191,6 +191,29 @@ def test_c_frontend_parses_core_c_translation_unit():
     tree = parse_c(source, "compat.c")
     assert validate_c(source)
     assert len(tree.ext) == 4
+
+
+def test_c_frontend_translates_executable_subset_to_python():
+    source = '''
+    int add(int left, int right) { return left + right; }
+    int main(void) {
+        int total = add(1, 2);
+        for (int index = 0; index < 2; index++) { total += index; }
+        return total;
+    }
+    '''
+    generated = compile_c_to_python(source)
+    namespace = {}
+    exec(generated, namespace, namespace)
+    assert namespace["main"]() == 4
+
+
+def test_c_frontend_translates_printf_and_include_lines():
+    source = '#include <stdio.h>\nint main(void) { printf("%d\\n", 7); return 0; }'
+    generated = compile_c_to_python(source)
+    namespace = {}
+    exec(generated, namespace, namespace)
+    assert namespace["main"]() == 0
 
 
 def test_llvm_emits_ir_for_function():
