@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+"""A tiny compiler for a minimal expression language.
+
+Example source:
+    let x = 10;
+    let y = 2;
+    print x + y * 3;
+
+The compiler emits stack-based bytecode and can also execute it.
+"""
+
+from __future__ import annotations
+
+import sys
+from dataclasses import dataclass
+from typing import List, Dict, Optional
+
+
+class CompileError(Exception):
+    pass
+
+
+@dataclass
+class Token:
+    kind: str
+    value: str
+    pos: int
+
+
+class Lexer:
+    def __init__(self, text: str):
+        self.text = text
+        self.pos = 0
+
+    def tokenize(self) -> List[Token]:
+        tokens: List[Token] = []
+        while self.pos < len(self.text):
+            ch = self.text[self.pos]
+
+            if ch.isspace():
+                self.pos += 1
+                continue
+
+            if ch.isdigit():
+                start = self.pos
+                while self.pos < len(self.text) and self.text[self.pos].isdigit():
+                    self.pos += 1
+                tokens.append(Token("NUMBER", self.text[start:self.pos], start))
+                continue
+
+            if ch.isalpha() or ch == "_":
+                start = self.pos
+                while self.pos < len(self.text) and (self.text[self.pos].isalnum() or self.text[self.pos] == "_"):
+                    self.pos += 1
+                value = self.text[start:self.pos]
+                if value in {"let", "print"}:
+                    tokens.append(Token(value.upper(), value, start))
+                else:
+                    tokens.append(Token("IDENT", value, start))
+                continue
+
+            if ch == ";":
+                tokens.append(Token("SEMI", ch, self.pos)); self.pos += 1; continue
+            if ch == "=":
+                tokens.append(Token("ASSIGN", ch, self.pos)); self.pos += 1; continue
+            if ch == "+":
+                tokens.append(Token("PLUS", ch, self.pos)); self.pos += 1; continue
+            if ch == "-":
+                tokens.append(Token("MINUS", ch, self.pos)); self.pos += 1; continue
+            if ch == "*":
+                tokens.append(Token("STAR", ch, self.pos)); self.pos += 1; continue
+            if ch == "/":
+                tokens.append(Token("SLASH", ch, self.pos)); self.pos += 1; continue
+            if ch == "(":
+                tokens.append(Token("LPAREN", ch, self.pos)); self.pos += 1; continue
+            if ch == ")":
+                tokens.append(Token("RPAREN", ch, self.pos)); self.pos += 1; continue
+
+            raise CompileError(f"Unexpected character {ch!r} at position {self.pos}")
+
+        tokens.append(Token("EOF", "", self.pos))
+        return tokens
+
+
+class Parser:
+    def __init__(self, tokens: List[Token]):
+        self.tokens = tokens
+        self.index = 0
+
+    def peek(self) -> Token:
+        return self.tokens[self.index]
+
+    def advance(self) -> Token:
+        tok = self.tokens[self.index]
+        self.index += 1
+        return tok
+
+    def match(self, *kinds: str) -> Optional[Token]:
+        if self.peek().kind in kinds:
+            return self.advance()
+        return None
+
+    def expect(self, kind: str, message: str) -> Token:
+        tok = self.match(kind)
+        if tok is None:
+            raise CompileError(f"Expected {message} at position {self.peek().pos}")
+        return tok
+
+    def parse_program(self) -> List[dict]:
+        stmts = []
+        while self.peek().kind != "EOF":
+            stmts.append(self.parse_statement())
+        return stmts
+
+    def parse_statement(self):
+        if self.match("LET"):
+            name = self.expect("IDENT", "identifier after let")
+            self.expect("ASSIGN", "=")
+            value = self.parse_expression()
+            self.expect("SEMI", ";")
+            return {"type": "let", "name": name.value, "value": value}
+
+        if self.match("PRINT"):
+            value = self.parse_expression()
+            self.expect("SEMI", ";")
+            return {"type": "print", "value": value}
+
+        expr = self.parse_expression()
+        self.expect("SEMI", ";")
+        return {"type": "expr", "value": expr}
+
+    def parse_expression(self):
+        return self.parse_add_sub()
+
+    def parse_add_sub(self):
+        node = self.parse_mul_div()
+        while self.peek().kind in {"PLUS", "MINUS"}:
+            op = self.advance().kind
+            rhs = self.parse_mul_div()
+            node = {"type": "binop", "op": op, "left": node, "right": rhs}
+        return node
+
+    def parse_mul_div(self):
+        node = self.parse_unary()
+        while self.peek().kind in {"STAR", "SLASH"}:
+            op = self.advance().kind
+            rhs = self.parse_unary()
+            node = {"type": "binop", "op": op, "left": node, "right": rhs}
+        return node
+
+    def parse_unary(self):
+        if self.peek().kind in {"PLUS", "MINUS"}:
+            op = self.advance().kind
+            operand = self.parse_unary()
+            return {"type": "unary", "op": op, "operand": operand}
+        return self.parse_primary()
+
+    def parse_primary(self):
+        tok = self.peek()
+        if tok.kind == "NUMBER":
+            self.advance()
+            return {"type": "number", "value": int(tok.value)}
+        if tok.kind == "IDENT":
+            self.advance()
+            return {"type": "ident", "name": tok.value}
+        if self.match("LPAREN"):
+            expr = self.parse_expression()
+            self.expect("RPAREN", ")")
+            return expr
+        raise CompileError(f"Unexpected token {tok.kind} at position {tok.pos}")
+
+
+class Compiler:
+    def __init__(self):
+        self.instructions = []
+
+    def emit(self, instruction: str):
+        self.instructions.append(instruction)
+
+    def compile_node(self, node: dict):
+        kind = node["type"]
+        if kind == "number":
+            self.emit(f"PUSH {node['value']}")
+        elif kind == "ident":
+            self.emit(f"LOAD {node['name']}")
+        elif kind == "unary":
+            self.compile_node(node["operand"])
+            self.emit(node["op"])
+        elif kind == "binop":
+            self.compile_node(node["left"])
+            self.compile_node(node["right"])
+            self.emit({"PLUS": "ADD", "MINUS": "SUB", "STAR": "MUL", "SLASH": "DIV"}[node["op"]])
+        else:
+            raise CompileError(f"Unsupported node type: {kind}")
+
+    def compile_statement(self, stmt: dict):
+        if stmt["type"] == "let":
+            self.compile_node(stmt["value"])
+            self.emit(f"STORE {stmt['name']}")
+        elif stmt["type"] == "print":
+            self.compile_node(stmt["value"])
+            self.emit("PRINT")
+        elif stmt["type"] == "expr":
+            self.compile_node(stmt["value"])
+            self.emit("PRINT")
+        else:
+            raise CompileError(f"Unsupported statement type: {stmt['type']}")
+
+    def compile_program(self, program: List[dict]) -> str:
+        self.instructions.clear()
+        for stmt in program:
+            self.compile_statement(stmt)
+        return "\n".join(self.instructions)
+
+
+class VirtualMachine:
+    def __init__(self):
+        self.vars: Dict[str, int] = {}
+        self.stack: List[int] = []
+
+    def run(self, program: str):
+        for line in program.splitlines():
+            if not line.strip():
+                continue
+            parts = line.split()
+            op = parts[0]
+            if op == "PUSH":
+                self.stack.append(int(parts[1]))
+            elif op == "LOAD":
+                self.stack.append(self.vars[parts[1]])
+            elif op == "STORE":
+                value = self.stack.pop()
+                self.vars[parts[1]] = value
+            elif op == "ADD":
+                b = self.stack.pop(); a = self.stack.pop(); self.stack.append(a + b)
+            elif op == "SUB":
+                b = self.stack.pop(); a = self.stack.pop(); self.stack.append(a - b)
+            elif op == "MUL":
+                b = self.stack.pop(); a = self.stack.pop(); self.stack.append(a * b)
+            elif op == "DIV":
+                b = self.stack.pop(); a = self.stack.pop(); self.stack.append(a // b)
+            elif op == "PRINT":
+                print(self.stack.pop())
+            elif op == "PLUS":
+                self.stack.append(self.stack.pop())
+            elif op == "MINUS":
+                self.stack.append(-self.stack.pop())
+            else:
+                raise CompileError(f"Unknown instruction: {op}")
+
+
+def compile_source(source: str) -> str:
+    tokens = Lexer(source).tokenize()
+    program = Parser(tokens).parse_program()
+    return Compiler().compile_program(program)
+
+
+def run_source(source: str):
+    bytecode = compile_source(source)
+    VM = VirtualMachine()
+    VM.run(bytecode)
+    return bytecode
+
+
+def main(argv: List[str]):
+    if len(argv) < 2:
+        print("usage: autoc <source-file>")
+        return 1
+
+    path = argv[1]
+    with open(path, "r", encoding="utf-8") as fh:
+        source = fh.read()
+
+    try:
+        bytecode = compile_source(source)
+        print("Compiled bytecode:")
+        print(bytecode)
+        print("\nExecution output:")
+        VM = VirtualMachine()
+        VM.run(bytecode)
+    except Exception as exc:
+        print(f"compile error: {exc}", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

@@ -1,0 +1,25 @@
+{
+  "name": "autoc",
+  "displayName": "autoc",
+  "description": "AutoC is a systems-oriented language designed to combine:",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.136.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "python",
+      "aliases": ["autoc.py", "python"],
+      "extensions": [".py"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "python",
+      "scopeName": "Perl, C, Python, Rust",
+      "path": "./syntaxes/python.tmLanguage.json"
+    }]
+  }
+}
